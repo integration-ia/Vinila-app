@@ -6,10 +6,17 @@ import { Input } from "@/components/ui/input"
 import { formSchema } from "@/lib/zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
+import { useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import { Button } from "../ui/button"
+import { useRouter } from "next/navigation"
 
 const LoginForm = () => {
+    const [error, setError] = useState<string | null>();
+    const [isPending, startTransition] = useTransition();
+    const router = useRouter()
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -19,10 +26,16 @@ const LoginForm = () => {
     });
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
-        await loginAction(values)
+        setError(null)
+        startTransition(async () => {
+            const response = await loginAction(values);
+            if (response.error)
+                setError(response.error);
+
+            else router.push("/dashboard");
+        });
     }
 
-    // const { formState } = form
     return (
         <div>
             {/* Background squares */}
@@ -43,14 +56,6 @@ const LoginForm = () => {
                     </header>
                     <Form {...form}>
                         <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-                            {/* <div className="space-y-2">
-              <label className="block text-sm text-gray-600">Email o nombre de usuario</label>
-              <input
-                type="text"
-                placeholder="Ingrese su nombre o email"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-800"
-              />
-            </div> */}
                             <FormField
                                 control={form.control}
                                 name="email"
@@ -86,16 +91,6 @@ const LoginForm = () => {
                                     </FormItem>
                                 )}
                             />
-                            {/* <label className="block text-sm text-gray-600">Contraseña</label>
-                            <div className="relative">
-                                <input
-                                    type="password"
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-800"
-                                />
-                                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                    <Eye className="w-5 h-5" />
-                                </button>
-                            </div> */}
 
                             <div className="flex items-center justify-between">
                                 <label className="flex items-center space-x-2 text-sm">
@@ -107,12 +102,14 @@ const LoginForm = () => {
                                 </Link>
                             </div>
 
-                            <button
+                            {error && <FormMessage className='text-center pt-4 text-base'>{error}</FormMessage>}
+                            <Button
                                 type="submit"
-                                className="w-full py-2.5 bg-blue-900 text-white rounded-full hover:bg-blue-950 transition-colors text-sm font-medium"
+                                disabled={isPending}
+                                className="w-full py-5 bg-blue-900 text-white rounded-full hover:bg-blue-950 transition-colors"
                             >
                                 Iniciar sesión
-                            </button>
+                            </Button>
 
                             <div className="text-center space-y-4">
                                 <p className="text-sm text-gray-600">
