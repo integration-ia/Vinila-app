@@ -7,8 +7,16 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import { Button } from "../ui/button"
+import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import { registerAction } from "@/actions/auth-action"
 
 const RegisterForm = () => {
+    const [error, setError] = useState<string | null>();
+    const [isPending, startTransition] = useTransition();
+    const router = useRouter()
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -17,11 +25,16 @@ const RegisterForm = () => {
         },
     });
 
-    const onSubmit = (values: z.infer<typeof formSchema>) => {
-        console.log(values);
-    }
+    const onSubmit = async (values: z.infer<typeof formSchema>) => {
+        setError(null)
+        startTransition(async () => {
+            const response = await registerAction(values);
+            if (response.error)
+                setError(response.error);
 
-    // const { formState } = form
+            else router.push("/dashboard");
+        });
+    }
     return (
         <div>
             {/* Background squares */}
@@ -42,14 +55,6 @@ const RegisterForm = () => {
                     </header>
                     <Form {...form}>
                         <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-                            {/* <div className="space-y-2">
-              <label className="block text-sm text-gray-600">Email o nombre de usuario</label>
-              <input
-                type="text"
-                placeholder="Ingrese su nombre o email"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-800"
-              />
-            </div> */}
                             <FormField
                                 control={form.control}
                                 name="email"
@@ -85,22 +90,14 @@ const RegisterForm = () => {
                                     </FormItem>
                                 )}
                             />
-                            {/* <label className="block text-sm text-gray-600">Contraseña</label>
-                            <div className="relative">
-                                <input
-                                    type="password"
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-800"
-                                />
-                                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                    <Eye className="w-5 h-5" />
-                                </button>
-                            </div> */}
-                            <button
+                            {error && <FormMessage className='text-center pt-4 text-base'>{error}</FormMessage>}
+                            <Button
                                 type="submit"
-                                className="w-full py-2.5 bg-blue-900 text-white rounded-full hover:bg-blue-950 transition-colors text-sm font-medium"
+                                disabled={isPending}
+                                className="w-full py-5 bg-blue-900 text-white rounded-full hover:bg-blue-950 transition-colors"
                             >
-                                Registarse
-                            </button>
+                                Iniciar sesión
+                            </Button>
 
                             <div className="text-center space-y-4">
                                 <p className="text-sm text-gray-600">
@@ -118,18 +115,6 @@ const RegisterForm = () => {
                                         <span className="px-2 bg-white text-gray-500">o</span>
                                     </div>
                                 </div>
-
-                                {/* <div className="flex justify-center space-x-4">
-                                    <button className="p-2">
-                                        <Image src="/placeholder.svg?height=24&width=24" alt="Google" width={24} height={24} />
-                                    </button>
-                                    <button className="p-2">
-                                        <Image src="/placeholder.svg?height=24&width=24" alt="Apple" width={24} height={24} />
-                                    </button>
-                                    <button className="p-2">
-                                        <Image src="/placeholder.svg?height=24&width=24" alt="Facebook" width={24} height={24} />
-                                    </button>
-                                </div> */}
                             </div>
                         </form>
                     </Form>
