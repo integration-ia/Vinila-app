@@ -1,3 +1,4 @@
+// auth.config.ts
 import { db } from "@/lib/db";
 import { formSchema } from "@/lib/zod";
 import { NextAuthConfig } from "next-auth";

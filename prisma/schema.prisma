@@ -1,58 +1,268 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
- 
-generator client {
-  provider = "prisma-client-js"
-}
- 
+
 enum Role {
   user
   admin
-  doctor
+}
+
+enum TipoUsuario {
+  solista
+  banda
+}
+
+enum EstadoRevision {
+  pendiente
+  aprobado
+  rechazado
+}
+
+enum TipoEntidad {
+  album
+  cancion
+  sencillo
 }
 
 model User {
+  /// Identificador único del usuario
   id            String          @id @default(cuid())
+  /// Nombre del usuario
   name          String?
+  /// Correo electrónico del usuario
   email         String          @unique
+  /// Contraseña del usuario (opcional si se usa autenticación OAuth)
   password      String?
+  /// Fecha de verificación del correo electrónico
   emailVerified DateTime?
+  /// URL de la imagen de perfil del usuario
   image         String?
-  role          Role          @default(user)
+  /// Biografía o descripción del usuario
+  bio           String?
+  /// Rol del usuario (usuario o administrador)
+  role          Role            @default(user)
+  /// Tipo de usuario (solista o banda)
+  tipo_usuario   TipoUsuario   @default(solista)
+  /// Fecha de registro del usuario
+  fecha_registro DateTime       @default(now())
+  /// Indica si el usuario está habilitado
+  habilitado    Boolean         @default(false)
+  /// Token para verificación de correo electrónico
+  token_verificacion String?
 
+  /// Relación con las cuentas de OAuth
   accounts      Account[]
- 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  /// Relación con las sesiones de usuario
+  sessions      Session[]
+  /// Relación con los álbumes creados por el usuario
+  albums        Album[]         @relation("UserAlbums")
+  /// Relación con las canciones subidas por el usuario
+  songs         Song[]          @relation("UserSongs")
+  /// Relación con los sencillos subidos por el usuario
+  singles       Single[]        @relation("UserSingles")
+  /// Estadísticas del usuario
+  statistics    UserStatistic?
+  /// Aprobaciones realizadas por el usuario (si es administrador)
+  approvals     Approval[]      @relation("AdminApprovals")
+
+  /// Fecha de creación del registro
+  createdAt     DateTime        @default(now())
+  /// Fecha de última actualización del registro
+  updatedAt     DateTime        @updatedAt
 }
- 
+
 model Account {
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
- 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
- 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
-  @@id([provider, providerAccountId])
+  /// Identificador único de la cuenta
+  id                 String     @id @default(cuid())
+  /// Identificador del usuario asociado
+  userId             String
+  /// Tipo de cuenta (por ejemplo, 'oauth')
+  type               String
+  /// Proveedor de autenticación (por ejemplo, 'google', 'github')
+  provider           String
+  /// Identificador de la cuenta en el proveedor
+  providerAccountId  String
+  /// Token de actualización del proveedor
+  refresh_token      String?
+  /// Token de acceso del proveedor
+  access_token       String?
+  /// Fecha de expiración del token de acceso
+  expires_at         Int?
+  /// Tipo de token (por ejemplo, 'Bearer')
+  token_type         String?
+  /// Alcance de los permisos otorgados por el proveedor
+  scope              String?
+  /// ID token para OpenID Connect
+  id_token           String?
+  /// Estado de la sesión
+  session_state      String?
+
+  /// Relación con el usuario
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  /// Identificador único de la sesión
+  id           String     @id @default(cuid())
+  /// Token de la sesión
+  sessionToken String     @unique
+  /// Identificador del usuario asociado
+  userId       String
+  /// Fecha de expiración de la sesión
+  expires      DateTime
+
+  /// Relación con el usuario
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
+  /// Identificador (por ejemplo, correo electrónico)
   identifier String
-  token      String
+  /// Token de verificación
+  token      String     @unique
+  /// Fecha de expiración del token
   expires    DateTime
- 
-  @@id([identifier, token])
+
+  @@unique([identifier, token])
+}
+
+model Album {
+  /// Identificador único del álbum
+  id               String       @id @default(cuid())
+  /// Título del álbum
+  titulo           String
+  /// Fecha de lanzamiento del álbum
+  fecha_lanzamiento DateTime?
+  /// Estado de revisión del álbum
+  estado_revision  EstadoRevision
+  /// Descripción del álbum
+  descripcion      String?
+  /// Relación con el usuario que creó el álbum
+  user             User         @relation("UserAlbums", fields: [userId], references: [id])
+  /// Identificador del usuario que creó el álbum
+  userId           String
+  /// Relación con las canciones del álbum
+  songs            Song[]
+  /// Relación con las aprobaciones del álbum
+  approvals        Approval[]   @relation("AlbumApprovals")
+}
+
+model Song {
+  /// Identificador único de la canción
+  id               String       @id @default(cuid())
+  /// Título de la canción
+  titulo           String
+  /// Duración de la canción (en formato de tiempo)
+  duracion         String
+  /// Estado de revisión de la canción
+  estado_revision  EstadoRevision
+  /// Género musical de la canción
+  genero           String
+  /// URL del archivo de audio
+  url_audio        String
+  /// Fecha de subida de la canción
+  fecha_subida     DateTime     @default(now())
+  /// Relación con el álbum al que pertenece (opcional)
+  album            Album?       @relation(fields: [albumId], references: [id])
+  /// Identificador del álbum al que pertenece (opcional)
+  albumId          String?
+  /// Relación con el usuario que subió la canción
+  user             User         @relation("UserSongs", fields: [userId], references: [id])
+  /// Identificador del usuario que subió la canción
+  userId           String
+  /// Relación con las reproducciones de la canción
+  plays            Play[]
+  /// Relación con las aprobaciones de la canción
+  approvals        Approval[]   @relation("SongApprovals")
+}
+
+model Single {
+  /// Identificador único del sencillo
+  id               String       @id @default(cuid())
+  /// Título del sencillo
+  titulo           String
+  /// Duración del sencillo (en formato de tiempo)
+  duracion         String
+  /// Estado de revisión del sencillo
+  estado_revision  EstadoRevision
+  /// Género musical del sencillo
+  genero           String
+  /// URL del archivo de audio
+  url_audio        String
+  /// Fecha de subida del sencillo
+  fecha_subida     DateTime     @default(now())
+  /// Relación con el usuario que subió el sencillo
+  user             User         @relation("UserSingles", fields: [userId], references: [id])
+  /// Identificador del usuario que subió el sencillo
+  userId           String
+  /// Relación con las reproducciones del sencillo
+  plays            Play[]
+  /// Relación con las aprobaciones del sencillo
+  approvals        Approval[]   @relation("SingleApprovals")
+}
+
+model Play {
+  /// Identificador único de la reproducción
+  id                  String       @id @default(cuid())
+  /// Fecha y hora de la reproducción
+  fecha_reproduccion  DateTime     @default(now())
+  /// Plataforma donde se reprodujo
+  plataforma          String
+  /// Relación con la canción reproducida (opcional)
+  song                Song?        @relation(fields: [songId], references: [id])
+  /// Identificador de la canción reproducida (opcional)
+  songId              String?
+  /// Relación con el sencillo reproducido (opcional)
+  single              Single?      @relation(fields: [singleId], references: [id])
+  /// Identificador del sencillo reproducido (opcional)
+  singleId            String?
+}
+
+model UserStatistic {
+  /// Identificador único de las estadísticas del usuario
+  id                        String       @id @default(cuid())
+  /// Total de reproducciones del usuario
+  reproducciones_totales    Int
+  /// Reproducciones por plataforma (almacenadas en formato JSON)
+  reproducciones_por_plataforma Json
+  /// Relación con el usuario
+  user                      User         @relation(fields: [userId], references: [id])
+  /// Identificador único del usuario (único)
+  userId                    String       @unique
+}
+
+model Approval {
+  /// Identificador único de la aprobación
+  id              String          @id @default(cuid())
+  /// Estado de revisión (aprobado, pendiente, rechazado)
+  estado          EstadoRevision
+  /// Fecha de revisión
+  fecha_revision  DateTime?
+  /// Comentarios del revisor
+  comentarios     String?
+  /// Relación con el administrador que realizó la aprobación
+  admin           User            @relation("AdminApprovals", fields: [adminId], references: [id])
+  /// Identificador del administrador
+  adminId         String
+
+  /// Identificador del álbum (si la aprobación es para un álbum)
+  albumId         String?
+  /// Identificador de la canción (si la aprobación es para una canción)
+  songId          String?
+  /// Identificador del sencillo (si la aprobación es para un sencillo)
+  singleId        String?
+
+  /// Relación con el álbum aprobado (opcional)
+  album           Album?          @relation("AlbumApprovals", fields: [albumId], references: [id])
+  /// Relación con la canción aprobada (opcional)
+  song            Song?           @relation("SongApprovals", fields: [songId], references: [id])
+  /// Relación con el sencillo aprobado (opcional)
+  single          Single?         @relation("SingleApprovals", fields: [singleId], references: [id])
 }

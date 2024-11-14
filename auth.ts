@@ -1,3 +1,4 @@
+// auth.ts
 import NextAuth from "next-auth"
 
 import { PrismaAdapter } from "@auth/prisma-adapter"
@@ -21,7 +22,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // jwt() se usa to add info del token a la sesión del user.
         // hace que esté disponible en el cliente
         session({ session, token }) {
-            session.user.role = token.role
+            if(session.user) {
+                session.user.role = token.role
+            }
             return session
         },
     },

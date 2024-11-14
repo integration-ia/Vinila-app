@@ -1,4 +1,4 @@
-import authConfig from "./auth.config"
+import authConfig from "@/auth.config"
 import NextAuth from "next-auth"
 import { NextResponse } from "next/server"
 
@@ -15,10 +15,7 @@ export default middleware((req) => {
     // returns true or false
     const isLoggedIn = !!auth?.user
 
-    console.log({ isLoggedIn });
-
-
-    // proteger /dashboard /admin
+    // protects /dashboard /doctor-dashboard etc
     if (!publicRoutes.includes(nextUrl.pathname) && !isLoggedIn) {
         return NextResponse.redirect(new URL("/login", nextUrl))
     }

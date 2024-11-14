@@ -5,6 +5,7 @@ import { formSchema } from "@/lib/zod"
 import { AuthError } from "next-auth"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
+import { TipoUsuario } from "@prisma/client"
 
 export const loginAction = async (
     values: z.infer<typeof formSchema>
@@ -48,7 +49,7 @@ export const registerAction = async (
         await db.user.create ({
             data: {
                 email: data.email,
-                password: passwordHash
+                password: passwordHash,
             }
         });
 
